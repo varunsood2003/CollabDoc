@@ -1,46 +1,44 @@
 package handlers
 
 import (
-	"context"
-	"net/http"
-
 	"doc-editor/config"
-	"doc-editor/prisma/db"
+	"doc-editor/models"
 	"doc-editor/utils"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterUser(c *gin.Context) {
-	var user struct {
+	var userInput struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&userInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	hashedPassword, err := utils.HashPassword(user.Password)
+	hashedPassword, err := utils.HashPassword(userInput.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
 		return
 	}
 
-	createdUser, err := config.Prisma.User.CreateOne(
-		db.User.Name.Set(user.Name),
-		db.User.Email.Set(user.Email),
-		db.User.Password.Set(hashedPassword),
-	).Exec(context.Background())
+	user := models.User{
+		Name:     userInput.Name,
+		Email:    userInput.Email,
+		Password: hashedPassword,
+	}
 
-	if err != nil {
+	if err := config.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdUser)
+	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
 }
 
 func LoginUser(c *gin.Context) {
@@ -54,11 +52,8 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	user, err := config.Prisma.User.FindUnique(
-		db.User.Email.Equals(creds.Email),
-	).Exec(context.Background())
-
-	if err != nil || user == nil {
+	var user models.User
+	if err := config.DB.Where("email = ?", creds.Email).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"doc-editor/config"
 	"doc-editor/routes"
 
@@ -10,12 +8,11 @@ import (
 )
 
 func main() {
-	config.InitDB()
+	config.ConnectDatabase()
 
 	r := gin.Default()
-	routes.RegisterAuthRoutes(r)
-	// routes.RegisterDocumentRoutes(r)
 
-	log.Println("Server running on port 8080")
+	routes.SetupRoutes(r)
+
 	r.Run(":8080")
 }
