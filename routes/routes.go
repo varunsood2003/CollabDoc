@@ -12,6 +12,8 @@ func SetupRoutes(router *gin.Engine) {
 		AuthRoutes(api)
 		DocRoutes(api)
 	}
+
+	router.GET("/ws", handlers.HandleWebSocket)
 }
 
 func AuthRoutes(router *gin.RouterGroup) {
